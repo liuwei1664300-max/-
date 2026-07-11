@@ -12,7 +12,6 @@
       --text-secondary: #6e6e73;
       --accent: #e67e22;
       --accent-hover: #d35400;
-      --danger: #e74c3c;
       --radius: 16px;
       --shadow: 0 2px 12px rgba(0,0,0,0.04);
     }
@@ -137,17 +136,16 @@
   <div class="message" id="message"></div>
 
   <script>
+    // 后端接口地址（部署后自动同源，无需修改）
     const API_BASE = '/api/copywenan';
 
-    // 显示短暂提示
-    function showToast(text, type = 'info') {
+    function showToast(text) {
       const msg = document.getElementById('message');
       msg.textContent = text;
       msg.classList.add('show');
       setTimeout(() => msg.classList.remove('show'), 2000);
     }
 
-    // 加载文案列表
     async function loadCopies() {
       const container = document.getElementById('listContainer');
       const loading = document.getElementById('loading');
@@ -194,15 +192,12 @@
       }
     }
 
-    // 复制并删除
     async function copyAndDelete(recordId, btn) {
       btn.disabled = true;
       try {
-        // 获取文案内容
         const card = btn.closest('.card');
         const content = card.querySelector('.card-content').innerText;
 
-        // 复制到剪贴板
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(content);
         } else {
@@ -216,20 +211,14 @@
           document.body.removeChild(textarea);
         }
 
-        // 调用删除接口
         const resp = await fetch(`${API_BASE}?record_id=${recordId}`, { method: 'DELETE' });
         const result = await resp.json();
         if (!resp.ok) throw new Error(result.error || '删除失败');
 
-        // 从页面移除卡片
         card.remove();
-
-        // 更新计数
         const remaining = document.querySelectorAll('.card').length;
         document.getElementById('countInfo').textContent = `剩余 ${remaining} 条`;
-        if (remaining === 0) {
-          document.getElementById('emptyTip').style.display = 'block';
-        }
+        if (remaining === 0) document.getElementById('emptyTip').style.display = 'block';
 
         showToast('✅ 已复制并删除');
       } catch (err) {
@@ -242,7 +231,6 @@
       return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // 初始化
     loadCopies();
   </script>
 </body>
