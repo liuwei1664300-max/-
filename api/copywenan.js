@@ -5,7 +5,6 @@ const APP_SECRET = process.env.FEISHU_APP_SECRET;
 const BITABLE_APP_TOKEN = process.env.BITABLE_APP_TOKEN;
 const TABLE_ID = process.env.TABLE_ID;
 
-// 获取 tenant_access_token
 async function getAccessToken() {
   const resp = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
     method: 'POST',
@@ -17,7 +16,6 @@ async function getAccessToken() {
   return data.tenant_access_token;
 }
 
-// 读取表格所有行
 async function getAllRecords(token) {
   const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${BITABLE_APP_TOKEN}/tables/${TABLE_ID}/records?page_size=200`;
   const resp = await fetch(url, {
@@ -28,7 +26,6 @@ async function getAllRecords(token) {
   return data.data.items || [];
 }
 
-// 主处理函数
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
@@ -40,7 +37,6 @@ module.exports = async (req, res) => {
     if (req.method === 'DELETE') {
       const recordId = req.query.record_id;
       if (!recordId) return res.status(400).json({ error: '缺少 record_id' });
-
       const deleteUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${BITABLE_APP_TOKEN}/tables/${TABLE_ID}/records/${recordId}`;
       const resp = await fetch(deleteUrl, {
         method: 'DELETE',
@@ -51,16 +47,19 @@ module.exports = async (req, res) => {
       return res.json({ success: true });
     }
 
-    // GET 请求：返回文案组合
+    // GET：读取所有记录
     const records = await getAllRecords(token);
+    
+    // 取第一行的 A 和 C 作为固定头尾（第一行可能只有A和C，B可能为空）
     const firstRecord = records.length > 0 ? records[0].fields : {};
     const headerA = firstRecord['活动头部(A)'] || '';
     const footerC = firstRecord['活动尾部(C)'] || '';
 
+    // 遍历所有行，只要 B 列字段存在（不严格检查非空）就加入，但至少要有内容
     const items = [];
     for (const record of records) {
       const bValue = record.fields['一次性文案(B)'];
-      if (bValue && bValue.trim()) {
+      if (bValue !== undefined && bValue !== null) {  // 允许空字符串，但至少字段存在
         items.push({
           record_id: record.record_id,
           combined: headerA + bValue + footerC
